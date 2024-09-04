@@ -1,0 +1,1631 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "id": "bcf0785e-55ef-42ee-959b-733d5cabed89",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "import pandas as pd\n",
+    "import re\n",
+    "from nltk.corpus import stopwords\n",
+    "from nltk.stem.porter import PorterStemmer\n",
+    "from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer\n",
+    "from sklearn.model_selection import train_test_split\n",
+    "from sklearn.linear_model import LogisticRegression\n",
+    "from sklearn.metrics import accuracy_score"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "6e9004aa-f37b-47a1-95b5-f8d284ef1381",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "[nltk_data] Downloading package stopwords to\n",
+      "[nltk_data]     C:\\Users\\Uyama\\AppData\\Roaming\\nltk_data...\n",
+      "[nltk_data]   Package stopwords is already up-to-date!\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "True"
+      ]
+     },
+     "execution_count": 2,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "import nltk\n",
+    "nltk.download('stopwords')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "d8e5a9bd-f8e9-4def-bb8c-fd918974062d",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', \"you're\", \"you've\", \"you'll\", \"you'd\", 'your', 'yours', 'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', \"she's\", 'her', 'hers', 'herself', 'it', \"it's\", 'its', 'itself', 'they', 'them', 'their', 'theirs', 'themselves', 'what', 'which', 'who', 'whom', 'this', 'that', \"that'll\", 'these', 'those', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while', 'of', 'at', 'by', 'for', 'with', 'about', 'against', 'between', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 's', 't', 'can', 'will', 'just', 'don', \"don't\", 'should', \"should've\", 'now', 'd', 'll', 'm', 'o', 're', 've', 'y', 'ain', 'aren', \"aren't\", 'couldn', \"couldn't\", 'didn', \"didn't\", 'doesn', \"doesn't\", 'hadn', \"hadn't\", 'hasn', \"hasn't\", 'haven', \"haven't\", 'isn', \"isn't\", 'ma', 'mightn', \"mightn't\", 'mustn', \"mustn't\", 'needn', \"needn't\", 'shan', \"shan't\", 'shouldn', \"shouldn't\", 'wasn', \"wasn't\", 'weren', \"weren't\", 'won', \"won't\", 'wouldn', \"wouldn't\"]\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(stopwords.words(\"english\"))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "607f66cf-2c46-4723-96e4-7bb3d37ed375",
+   "metadata": {},
+   "source": [
+    "### Data Processing"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "e708f529-afe6-4e18-a437-72e2a8082c47",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>0</th>\n",
+       "      <th>1467810369</th>\n",
+       "      <th>Mon Apr 06 22:19:45 PDT 2009</th>\n",
+       "      <th>NO_QUERY</th>\n",
+       "      <th>_TheSpecialOne_</th>\n",
+       "      <th>@switchfoot http://twitpic.com/2y1zl - Awww, that's a bummer.  You shoulda got David Carr of Third Day to do it. ;D</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>0</td>\n",
+       "      <td>1467810672</td>\n",
+       "      <td>Mon Apr 06 22:19:49 PDT 2009</td>\n",
+       "      <td>NO_QUERY</td>\n",
+       "      <td>scotthamilton</td>\n",
+       "      <td>is upset that he can't update his Facebook by ...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>0</td>\n",
+       "      <td>1467810917</td>\n",
+       "      <td>Mon Apr 06 22:19:53 PDT 2009</td>\n",
+       "      <td>NO_QUERY</td>\n",
+       "      <td>mattycus</td>\n",
+       "      <td>@Kenichan I dived many times for the ball. Man...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>0</td>\n",
+       "      <td>1467811184</td>\n",
+       "      <td>Mon Apr 06 22:19:57 PDT 2009</td>\n",
+       "      <td>NO_QUERY</td>\n",
+       "      <td>ElleCTF</td>\n",
+       "      <td>my whole body feels itchy and like its on fire</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>0</td>\n",
+       "      <td>1467811193</td>\n",
+       "      <td>Mon Apr 06 22:19:57 PDT 2009</td>\n",
+       "      <td>NO_QUERY</td>\n",
+       "      <td>Karoli</td>\n",
+       "      <td>@nationwideclass no, it's not behaving at all....</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>0</td>\n",
+       "      <td>1467811372</td>\n",
+       "      <td>Mon Apr 06 22:20:00 PDT 2009</td>\n",
+       "      <td>NO_QUERY</td>\n",
+       "      <td>joy_wolf</td>\n",
+       "      <td>@Kwesidei not the whole crew</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "   0  1467810369  Mon Apr 06 22:19:45 PDT 2009  NO_QUERY _TheSpecialOne_  \\\n",
+       "0  0  1467810672  Mon Apr 06 22:19:49 PDT 2009  NO_QUERY   scotthamilton   \n",
+       "1  0  1467810917  Mon Apr 06 22:19:53 PDT 2009  NO_QUERY        mattycus   \n",
+       "2  0  1467811184  Mon Apr 06 22:19:57 PDT 2009  NO_QUERY         ElleCTF   \n",
+       "3  0  1467811193  Mon Apr 06 22:19:57 PDT 2009  NO_QUERY          Karoli   \n",
+       "4  0  1467811372  Mon Apr 06 22:20:00 PDT 2009  NO_QUERY        joy_wolf   \n",
+       "\n",
+       "  @switchfoot http://twitpic.com/2y1zl - Awww, that's a bummer.  You shoulda got David Carr of Third Day to do it. ;D  \n",
+       "0  is upset that he can't update his Facebook by ...                                                                   \n",
+       "1  @Kenichan I dived many times for the ball. Man...                                                                   \n",
+       "2    my whole body feels itchy and like its on fire                                                                    \n",
+       "3  @nationwideclass no, it's not behaving at all....                                                                   \n",
+       "4                      @Kwesidei not the whole crew                                                                    "
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# load the data\n",
+    "import pandas as pd\n",
+    "df = pd.read_csv(\"twitter_data.csv\", encoding=\"ISO-8859-1\")\n",
+    "df.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "5ba994d2-0ec9-459a-bddd-71fa1af2b62e",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# assigning names to columns\n",
+    "column_names = [\"target\", \"id\",\"date\",\"flag\", \"user\",\"text\" ]\n",
+    "df = pd.read_csv(\"twitter_data.csv\", names=column_names, encoding = \"ISO-8859-1\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "5077df2e-ef63-440b-8cac-dd9c4a6b1f7c",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(1600000, 6)"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df.shape"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "8dfa233e-181b-4702-91b8-39abb2ef3b10",
+   "metadata": {
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>target</th>\n",
+       "      <th>id</th>\n",
+       "      <th>date</th>\n",
+       "      <th>flag</th>\n",
+       "      <th>user</th>\n",
+       "      <th>text</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>0</td>\n",
+       "      <td>1467810369</td>\n",
+       "      <td>Mon Apr 06 22:19:45 PDT 2009</td>\n",
+       "      <td>NO_QUERY</td>\n",
+       "      <td>_TheSpecialOne_</td>\n",
+       "      <td>@switchfoot http://twitpic.com/2y1zl - Awww, t...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>0</td>\n",
+       "      <td>1467810672</td>\n",
+       "      <td>Mon Apr 06 22:19:49 PDT 2009</td>\n",
+       "      <td>NO_QUERY</td>\n",
+       "      <td>scotthamilton</td>\n",
+       "      <td>is upset that he can't update his Facebook by ...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>0</td>\n",
+       "      <td>1467810917</td>\n",
+       "      <td>Mon Apr 06 22:19:53 PDT 2009</td>\n",
+       "      <td>NO_QUERY</td>\n",
+       "      <td>mattycus</td>\n",
+       "      <td>@Kenichan I dived many times for the ball. Man...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>0</td>\n",
+       "      <td>1467811184</td>\n",
+       "      <td>Mon Apr 06 22:19:57 PDT 2009</td>\n",
+       "      <td>NO_QUERY</td>\n",
+       "      <td>ElleCTF</td>\n",
+       "      <td>my whole body feels itchy and like its on fire</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>0</td>\n",
+       "      <td>1467811193</td>\n",
+       "      <td>Mon Apr 06 22:19:57 PDT 2009</td>\n",
+       "      <td>NO_QUERY</td>\n",
+       "      <td>Karoli</td>\n",
+       "      <td>@nationwideclass no, it's not behaving at all....</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "   target          id                          date      flag  \\\n",
+       "0       0  1467810369  Mon Apr 06 22:19:45 PDT 2009  NO_QUERY   \n",
+       "1       0  1467810672  Mon Apr 06 22:19:49 PDT 2009  NO_QUERY   \n",
+       "2       0  1467810917  Mon Apr 06 22:19:53 PDT 2009  NO_QUERY   \n",
+       "3       0  1467811184  Mon Apr 06 22:19:57 PDT 2009  NO_QUERY   \n",
+       "4       0  1467811193  Mon Apr 06 22:19:57 PDT 2009  NO_QUERY   \n",
+       "\n",
+       "              user                                               text  \n",
+       "0  _TheSpecialOne_  @switchfoot http://twitpic.com/2y1zl - Awww, t...  \n",
+       "1    scotthamilton  is upset that he can't update his Facebook by ...  \n",
+       "2         mattycus  @Kenichan I dived many times for the ball. Man...  \n",
+       "3          ElleCTF    my whole body feels itchy and like its on fire   \n",
+       "4           Karoli  @nationwideclass no, it's not behaving at all....  "
+      ]
+     },
+     "execution_count": 8,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "47e71bcf-0142-498b-b02d-3db7be51cb71",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "target    0\n",
+       "id        0\n",
+       "date      0\n",
+       "flag      0\n",
+       "user      0\n",
+       "text      0\n",
+       "dtype: int64"
+      ]
+     },
+     "execution_count": 9,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "#check for missing values\n",
+    "df.isnull().sum()c"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "45e057f8-a713-46bb-906c-82aa9faa9fe8",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "target\n",
+       "0    800000\n",
+       "4    800000\n",
+       "Name: count, dtype: int64"
+      ]
+     },
+     "execution_count": 10,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# checking the distribution of target columns\n",
+    "df[\"target\"].value_counts()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "bf1d08f9-7d19-456e-bf7e-7f6d08bdaa23",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# change the target name from 4 to 1\n",
+    "df.replace({'target': {4: 1}}, inplace=True)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "d8d88520-7d68-4230-a296-d6b0bbb02183",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "target\n",
+       "0    800000\n",
+       "1    800000\n",
+       "Name: count, dtype: int64"
+      ]
+     },
+     "execution_count": 12,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df[\"target\"].value_counts()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "9cd15582-8088-4b50-bd47-2f71d95d4aa6",
+   "metadata": {},
+   "source": [
+    "0 ---> negative tweet\n",
+    "\n",
+    "1 ---> positive tweet"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "id": "ce034e90-f335-4b15-8f11-271cd594f7da",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# applying stemming\n",
+    "import swifter\n",
+    "port_stem = PorterStemmer()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "id": "ae0d1282-6407-4cbd-853c-104aa97683c1",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def stemming(content):\n",
+    "    # Remove non-alphabetic characters, keeping spaces\n",
+    "    stemmed_content = re.sub(r'[^a-zA-Z\\s]', '', content)\n",
+    "    # Convert to lowercase\n",
+    "    stemmed_content = stemmed_content.lower()\n",
+    "    # Split the content into words\n",
+    "    stemmed_content = stemmed_content.split()\n",
+    "    # Stem each word and remove stopwords\n",
+    "    stemmed_content = [port_stem.stem(word) for word in stemmed_content if word not in stopwords.words(\"english\")]\n",
+    "    # Join the stemmed words back into a string\n",
+    "    stemmed_content = \" \".join(stemmed_content)\n",
+    "\n",
+    "    return stemmed_content"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "id": "5a04aa6f-93e7-47d8-948d-163fe45593f5",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "application/vnd.jupyter.widget-view+json": {
+       "model_id": "cdfbc24a59fc42bda783ed1348d2faeb",
+       "version_major": 2,
+       "version_minor": 0
+      },
+      "text/plain": [
+       "Pandas Apply:   0%|          | 0/1600000 [00:00<?, ?it/s]"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "#create a new column and apply the stemming function\n",
+    "df[\"stemmed_content\"] = df[\"text\"].swifter.apply(stemming)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "id": "430c1ff0-d709-49e7-8af5-83a31a953824",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>target</th>\n",
+       "      <th>id</th>\n",
+       "      <th>date</th>\n",
+       "      <th>flag</th>\n",
+       "      <th>user</th>\n",
+       "      <th>text</th>\n",
+       "      <th>stemmed_content</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>0</td>\n",
+       "      <td>1467810369</td>\n",
+       "      <td>Mon Apr 06 22:19:45 PDT 2009</td>\n",
+       "      <td>NO_QUERY</td>\n",
+       "      <td>_TheSpecialOne_</td>\n",
+       "      <td>@switchfoot http://twitpic.com/2y1zl - Awww, t...</td>\n",
+       "      <td>switchfoot httptwitpiccomyzl awww that bummer ...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>0</td>\n",
+       "      <td>1467810672</td>\n",
+       "      <td>Mon Apr 06 22:19:49 PDT 2009</td>\n",
+       "      <td>NO_QUERY</td>\n",
+       "      <td>scotthamilton</td>\n",
+       "      <td>is upset that he can't update his Facebook by ...</td>\n",
+       "      <td>upset cant updat facebook text might cri resul...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>0</td>\n",
+       "      <td>1467810917</td>\n",
+       "      <td>Mon Apr 06 22:19:53 PDT 2009</td>\n",
+       "      <td>NO_QUERY</td>\n",
+       "      <td>mattycus</td>\n",
+       "      <td>@Kenichan I dived many times for the ball. Man...</td>\n",
+       "      <td>kenichan dive mani time ball manag save rest g...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>0</td>\n",
+       "      <td>1467811184</td>\n",
+       "      <td>Mon Apr 06 22:19:57 PDT 2009</td>\n",
+       "      <td>NO_QUERY</td>\n",
+       "      <td>ElleCTF</td>\n",
+       "      <td>my whole body feels itchy and like its on fire</td>\n",
+       "      <td>whole bodi feel itchi like fire</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>0</td>\n",
+       "      <td>1467811193</td>\n",
+       "      <td>Mon Apr 06 22:19:57 PDT 2009</td>\n",
+       "      <td>NO_QUERY</td>\n",
+       "      <td>Karoli</td>\n",
+       "      <td>@nationwideclass no, it's not behaving at all....</td>\n",
+       "      <td>nationwideclass behav im mad cant see</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "   target          id                          date      flag  \\\n",
+       "0       0  1467810369  Mon Apr 06 22:19:45 PDT 2009  NO_QUERY   \n",
+       "1       0  1467810672  Mon Apr 06 22:19:49 PDT 2009  NO_QUERY   \n",
+       "2       0  1467810917  Mon Apr 06 22:19:53 PDT 2009  NO_QUERY   \n",
+       "3       0  1467811184  Mon Apr 06 22:19:57 PDT 2009  NO_QUERY   \n",
+       "4       0  1467811193  Mon Apr 06 22:19:57 PDT 2009  NO_QUERY   \n",
+       "\n",
+       "              user                                               text  \\\n",
+       "0  _TheSpecialOne_  @switchfoot http://twitpic.com/2y1zl - Awww, t...   \n",
+       "1    scotthamilton  is upset that he can't update his Facebook by ...   \n",
+       "2         mattycus  @Kenichan I dived many times for the ball. Man...   \n",
+       "3          ElleCTF    my whole body feels itchy and like its on fire    \n",
+       "4           Karoli  @nationwideclass no, it's not behaving at all....   \n",
+       "\n",
+       "                                     stemmed_content  \n",
+       "0  switchfoot httptwitpiccomyzl awww that bummer ...  \n",
+       "1  upset cant updat facebook text might cri resul...  \n",
+       "2  kenichan dive mani time ball manag save rest g...  \n",
+       "3                    whole bodi feel itchi like fire  \n",
+       "4              nationwideclass behav im mad cant see  "
+      ]
+     },
+     "execution_count": 18,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "id": "34a423fc-470c-42ef-9689-e9831d34e599",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "0          switchfoot httptwitpiccomyzl awww that bummer ...\n",
+      "1          upset cant updat facebook text might cri resul...\n",
+      "2          kenichan dive mani time ball manag save rest g...\n",
+      "3                            whole bodi feel itchi like fire\n",
+      "4                      nationwideclass behav im mad cant see\n",
+      "                                 ...                        \n",
+      "1599995                           woke school best feel ever\n",
+      "1599996    thewdbcom cool hear old walt interview httpbli...\n",
+      "1599997                         readi mojo makeov ask detail\n",
+      "1599998    happi th birthday boo alll time tupac amaru sh...\n",
+      "1599999    happi charitytuesday thenspcc sparkschar speak...\n",
+      "Name: stemmed_content, Length: 1600000, dtype: object\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(df[\"stemmed_content\"])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 52,
+   "id": "8ff83ee7-2b58-42e1-9706-2b2f2d8da22f",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "0          0\n",
+      "1          0\n",
+      "2          0\n",
+      "3          0\n",
+      "4          0\n",
+      "          ..\n",
+      "1599995    1\n",
+      "1599996    1\n",
+      "1599997    1\n",
+      "1599998    1\n",
+      "1599999    1\n",
+      "Name: target, Length: 1600000, dtype: int64\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(df[\"target\"])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 53,
+   "id": "d540f284-d275-493f-8aba-7da15386e98f",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# separating the data and label\n",
+    "X = df[\"stemmed_content\"].values\n",
+    "y = df[\"target\"].values"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 51,
+   "id": "d4798e64-9f2f-421d-9f10-f70edd3a3b31",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "['switchfoot httptwitpiccomyzl awww that bummer shoulda got david carr third day'\n",
+      " 'upset cant updat facebook text might cri result school today also blah'\n",
+      " 'kenichan dive mani time ball manag save rest go bound' ...\n",
+      " 'readi mojo makeov ask detail'\n",
+      " 'happi th birthday boo alll time tupac amaru shakur'\n",
+      " 'happi charitytuesday thenspcc sparkschar speakinguphh']\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(X)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 61,
+   "id": "619dfc1a-eeea-4202-affd-60f0617835d1",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[0 0 0 ... 1 1 1]\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(y)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "977a887d-fcea-41d2-b44b-f79c8d156718",
+   "metadata": {},
+   "source": [
+    "### Split the data into training and testing sets\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 71,
+   "id": "09b047a9-068b-413a-b930-8abe1b2e2cdb",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# split the data into training and testing sets\n",
+    "X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify= y, random_state=42)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 72,
+   "id": "119ecda0-f59a-4778-9046-64138b249462",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "(1600000,) (1280000,) (320000,)\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(X.shape, X_train.shape, X_test.shape)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 73,
+   "id": "74ae0373-6c62-4d6c-a28f-d2421fefbc06",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "['paisleypaisley lol get idea far advanc even june yet need third knitter summer group'\n",
+      " 'worst headach ever'\n",
+      " 'ewaniesciuszko sad wont see miss alreadi yeah that perfect come back th'\n",
+      " ... 'got home meet talk endlessli one coolest guy she ever met smile'\n",
+      " 'bought chocol bar quot win free barquot label didnt win either'\n",
+      " 'misecia said hope dm email sunday']\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(X_train)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 74,
+   "id": "ca8649c1-1ba4-4eeb-80e3-177ca87d986a",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "['stmdenali ye black red fav color realli want color def look awesom jare'\n",
+      " 'qu buy open hous weekend ampm best valu one bedroom lic long island citi bd httptinyurlcomptnqd'\n",
+      " 'ginoandfran fran greet air that okay hahahaha thank' ...\n",
+      " 'labrat follow also hope atleast get also wish get well soon'\n",
+      " 'feel like havent decent swell sinc last fall hope wave myrtl beach week either least golf'\n",
+      " 'relaxin busi day']\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(X_test)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 75,
+   "id": "69b4f835-27d2-4232-b1e4-31d0f90bc5d8",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# convert the textual data to numerical values\n",
+    " # Initialize TF-IDF Vectorizer\n",
+    "from sklearn.feature_extraction.text import TfidfVectorizer\n",
+    "vectorizer = TfidfVectorizer()\n",
+    "\n",
+    "# Transform the text data into TF-IDF features\n",
+    "X_train = vectorizer.fit_transform(X_train)\n",
+    "X_test = vectorizer.transform(X_test)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 76,
+   "id": "1638e106-456e-4ba4-8c9f-ce9d11db71c8",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "  (0, 191752)\t0.2699889384994864\n",
+      "  (0, 528850)\t0.2057070428991204\n",
+      "  (0, 313219)\t0.43298754546066626\n",
+      "  (0, 551100)\t0.2973977531329023\n",
+      "  (0, 393452)\t0.16084280709365456\n",
+      "  (0, 615324)\t0.20196589015298355\n",
+      "  (0, 297458)\t0.24167952967877396\n",
+      "  (0, 153316)\t0.18312111187735716\n",
+      "  (0, 5623)\t0.31641573446549026\n",
+      "  (0, 159201)\t0.22066279226821559\n",
+      "  (0, 262859)\t0.22374137247700898\n",
+      "  (0, 180944)\t0.12888151740983847\n",
+      "  (0, 335670)\t0.1529338066904954\n",
+      "  (0, 419860)\t0.4597755974511012\n",
+      "  (1, 153510)\t0.5132095392946405\n",
+      "  (1, 201089)\t0.5777876782215186\n",
+      "  (1, 604170)\t0.6346474357250409\n",
+      "  (2, 543344)\t0.27185214392787865\n",
+      "  (2, 38807)\t0.1918810401582202\n",
+      "  (2, 97795)\t0.20824197554997634\n",
+      "  (2, 426728)\t0.31302096230303084\n",
+      "  (2, 544001)\t0.21776155551835225\n",
+      "  (2, 613479)\t0.2339457202388596\n",
+      "  (2, 15258)\t0.2504882393396453\n",
+      "  (2, 370145)\t0.19162329852014293\n",
+      "  :\t:\n",
+      "  (1279997, 193962)\t0.22739640491899754\n",
+      "  (1279997, 509024)\t0.2916910245291714\n",
+      "  (1279997, 536219)\t0.23918821667051524\n",
+      "  (1279997, 359388)\t0.2581513007688756\n",
+      "  (1279997, 188130)\t0.17956264281994785\n",
+      "  (1279997, 496371)\t0.26854886918357784\n",
+      "  (1279997, 210448)\t0.1979020952786122\n",
+      "  (1279997, 412676)\t0.18423498981110997\n",
+      "  (1279997, 153510)\t0.2454997639919529\n",
+      "  (1279998, 42180)\t0.45528408862092157\n",
+      "  (1279998, 318331)\t0.3609494980914579\n",
+      "  (1279998, 41595)\t0.28326414703828656\n",
+      "  (1279998, 171344)\t0.23591304056991877\n",
+      "  (1279998, 446890)\t0.2657736797213388\n",
+      "  (1279998, 599182)\t0.471317070636845\n",
+      "  (1279998, 143600)\t0.24815987345082235\n",
+      "  (1279998, 61519)\t0.2549429730716045\n",
+      "  (1279998, 88347)\t0.26791642431116514\n",
+      "  (1279998, 125091)\t0.18816066575178372\n",
+      "  (1279999, 369876)\t0.6647948623703069\n",
+      "  (1279999, 480259)\t0.32491700342972446\n",
+      "  (1279999, 146105)\t0.35559739187778444\n",
+      "  (1279999, 529408)\t0.32828850569430507\n",
+      "  (1279999, 129910)\t0.3984472582300372\n",
+      "  (1279999, 211924)\t0.24391323493401607\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(X_train)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 77,
+   "id": "4435d8c9-99f6-40dd-ad74-1d9762641ca0",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "  (0, 613383)\t0.18511180889912876\n",
+      "  (0, 589511)\t0.14634802067751218\n",
+      "  (0, 524103)\t0.45855844166815857\n",
+      "  (0, 463435)\t0.23501558614890705\n",
+      "  (0, 462140)\t0.15202629812978538\n",
+      "  (0, 337078)\t0.15869499987003843\n",
+      "  (0, 279114)\t0.33055066518690546\n",
+      "  (0, 160285)\t0.26522549478186236\n",
+      "  (0, 120139)\t0.26483393755898565\n",
+      "  (0, 97477)\t0.5352955575059065\n",
+      "  (0, 54680)\t0.2454966102852299\n",
+      "  (0, 35953)\t0.18427253516772754\n",
+      "  (1, 592773)\t0.16996763572134646\n",
+      "  (1, 581129)\t0.2951072024168845\n",
+      "  (1, 445638)\t0.33101694554235694\n",
+      "  (1, 414674)\t0.20697359525719528\n",
+      "  (1, 412676)\t0.13725322888309424\n",
+      "  (1, 336751)\t0.17360105510600915\n",
+      "  (1, 328653)\t0.40100695182582297\n",
+      "  (1, 272293)\t0.25535475907252503\n",
+      "  (1, 213320)\t0.18205770933359394\n",
+      "  (1, 92033)\t0.21973903048938576\n",
+      "  (1, 71634)\t0.19696833977298697\n",
+      "  (1, 49530)\t0.17470114715875446\n",
+      "  (1, 46165)\t0.28281841880029335\n",
+      "  :\t:\n",
+      "  (319997, 513369)\t0.27562451740910365\n",
+      "  (319997, 211924)\t0.22965160814847113\n",
+      "  (319997, 180944)\t0.3702493789986563\n",
+      "  (319997, 167855)\t0.25765629121838257\n",
+      "  (319997, 33249)\t0.4388426580226312\n",
+      "  (319997, 15523)\t0.6029052137580347\n",
+      "  (319998, 592711)\t0.18253105483683538\n",
+      "  (319998, 590860)\t0.29326973479142543\n",
+      "  (319998, 533703)\t0.3443916783326139\n",
+      "  (319998, 503541)\t0.2195015265989773\n",
+      "  (319998, 388027)\t0.39404426243894475\n",
+      "  (319998, 329658)\t0.1427827288315728\n",
+      "  (319998, 324853)\t0.2252950330617328\n",
+      "  (319998, 321525)\t0.17208085143370877\n",
+      "  (319998, 211924)\t0.1647532576278645\n",
+      "  (319998, 200149)\t0.21490862895500817\n",
+      "  (319998, 186243)\t0.30107570380239723\n",
+      "  (319998, 161243)\t0.16012265321314437\n",
+      "  (319998, 158199)\t0.24251028131315064\n",
+      "  (319998, 143600)\t0.24041478075982997\n",
+      "  (319998, 119422)\t0.30890117864185246\n",
+      "  (319998, 44326)\t0.23709835283750164\n",
+      "  (319999, 465242)\t0.8163197070867111\n",
+      "  (319999, 116502)\t0.2968089572917412\n",
+      "  (319999, 70779)\t0.4955063861276217\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(X_test)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "3bb62712-7401-41ad-9c61-58c92491fab9",
+   "metadata": {},
+   "source": [
+    "### Model Training"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 78,
+   "id": "5cd58a33-571a-4f8e-9188-964776e77bc0",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<style>#sk-container-id-3 {\n",
+       "  /* Definition of color scheme common for light and dark mode */\n",
+       "  --sklearn-color-text: black;\n",
+       "  --sklearn-color-line: gray;\n",
+       "  /* Definition of color scheme for unfitted estimators */\n",
+       "  --sklearn-color-unfitted-level-0: #fff5e6;\n",
+       "  --sklearn-color-unfitted-level-1: #f6e4d2;\n",
+       "  --sklearn-color-unfitted-level-2: #ffe0b3;\n",
+       "  --sklearn-color-unfitted-level-3: chocolate;\n",
+       "  /* Definition of color scheme for fitted estimators */\n",
+       "  --sklearn-color-fitted-level-0: #f0f8ff;\n",
+       "  --sklearn-color-fitted-level-1: #d4ebff;\n",
+       "  --sklearn-color-fitted-level-2: #b3dbfd;\n",
+       "  --sklearn-color-fitted-level-3: cornflowerblue;\n",
+       "\n",
+       "  /* Specific color for light theme */\n",
+       "  --sklearn-color-text-on-default-background: var(--sg-text-color, var(--theme-code-foreground, var(--jp-content-font-color1, black)));\n",
+       "  --sklearn-color-background: var(--sg-background-color, var(--theme-background, var(--jp-layout-color0, white)));\n",
+       "  --sklearn-color-border-box: var(--sg-text-color, var(--theme-code-foreground, var(--jp-content-font-color1, black)));\n",
+       "  --sklearn-color-icon: #696969;\n",
+       "\n",
+       "  @media (prefers-color-scheme: dark) {\n",
+       "    /* Redefinition of color scheme for dark theme */\n",
+       "    --sklearn-color-text-on-default-background: var(--sg-text-color, var(--theme-code-foreground, var(--jp-content-font-color1, white)));\n",
+       "    --sklearn-color-background: var(--sg-background-color, var(--theme-background, var(--jp-layout-color0, #111)));\n",
+       "    --sklearn-color-border-box: var(--sg-text-color, var(--theme-code-foreground, var(--jp-content-font-color1, white)));\n",
+       "    --sklearn-color-icon: #878787;\n",
+       "  }\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 {\n",
+       "  color: var(--sklearn-color-text);\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 pre {\n",
+       "  padding: 0;\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 input.sk-hidden--visually {\n",
+       "  border: 0;\n",
+       "  clip: rect(1px 1px 1px 1px);\n",
+       "  clip: rect(1px, 1px, 1px, 1px);\n",
+       "  height: 1px;\n",
+       "  margin: -1px;\n",
+       "  overflow: hidden;\n",
+       "  padding: 0;\n",
+       "  position: absolute;\n",
+       "  width: 1px;\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 div.sk-dashed-wrapped {\n",
+       "  border: 1px dashed var(--sklearn-color-line);\n",
+       "  margin: 0 0.4em 0.5em 0.4em;\n",
+       "  box-sizing: border-box;\n",
+       "  padding-bottom: 0.4em;\n",
+       "  background-color: var(--sklearn-color-background);\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 div.sk-container {\n",
+       "  /* jupyter's `normalize.less` sets `[hidden] { display: none; }`\n",
+       "     but bootstrap.min.css set `[hidden] { display: none !important; }`\n",
+       "     so we also need the `!important` here to be able to override the\n",
+       "     default hidden behavior on the sphinx rendered scikit-learn.org.\n",
+       "     See: https://github.com/scikit-learn/scikit-learn/issues/21755 */\n",
+       "  display: inline-block !important;\n",
+       "  position: relative;\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 div.sk-text-repr-fallback {\n",
+       "  display: none;\n",
+       "}\n",
+       "\n",
+       "div.sk-parallel-item,\n",
+       "div.sk-serial,\n",
+       "div.sk-item {\n",
+       "  /* draw centered vertical line to link estimators */\n",
+       "  background-image: linear-gradient(var(--sklearn-color-text-on-default-background), var(--sklearn-color-text-on-default-background));\n",
+       "  background-size: 2px 100%;\n",
+       "  background-repeat: no-repeat;\n",
+       "  background-position: center center;\n",
+       "}\n",
+       "\n",
+       "/* Parallel-specific style estimator block */\n",
+       "\n",
+       "#sk-container-id-3 div.sk-parallel-item::after {\n",
+       "  content: \"\";\n",
+       "  width: 100%;\n",
+       "  border-bottom: 2px solid var(--sklearn-color-text-on-default-background);\n",
+       "  flex-grow: 1;\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 div.sk-parallel {\n",
+       "  display: flex;\n",
+       "  align-items: stretch;\n",
+       "  justify-content: center;\n",
+       "  background-color: var(--sklearn-color-background);\n",
+       "  position: relative;\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 div.sk-parallel-item {\n",
+       "  display: flex;\n",
+       "  flex-direction: column;\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 div.sk-parallel-item:first-child::after {\n",
+       "  align-self: flex-end;\n",
+       "  width: 50%;\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 div.sk-parallel-item:last-child::after {\n",
+       "  align-self: flex-start;\n",
+       "  width: 50%;\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 div.sk-parallel-item:only-child::after {\n",
+       "  width: 0;\n",
+       "}\n",
+       "\n",
+       "/* Serial-specific style estimator block */\n",
+       "\n",
+       "#sk-container-id-3 div.sk-serial {\n",
+       "  display: flex;\n",
+       "  flex-direction: column;\n",
+       "  align-items: center;\n",
+       "  background-color: var(--sklearn-color-background);\n",
+       "  padding-right: 1em;\n",
+       "  padding-left: 1em;\n",
+       "}\n",
+       "\n",
+       "\n",
+       "/* Toggleable style: style used for estimator/Pipeline/ColumnTransformer box that is\n",
+       "clickable and can be expanded/collapsed.\n",
+       "- Pipeline and ColumnTransformer use this feature and define the default style\n",
+       "- Estimators will overwrite some part of the style using the `sk-estimator` class\n",
+       "*/\n",
+       "\n",
+       "/* Pipeline and ColumnTransformer style (default) */\n",
+       "\n",
+       "#sk-container-id-3 div.sk-toggleable {\n",
+       "  /* Default theme specific background. It is overwritten whether we have a\n",
+       "  specific estimator or a Pipeline/ColumnTransformer */\n",
+       "  background-color: var(--sklearn-color-background);\n",
+       "}\n",
+       "\n",
+       "/* Toggleable label */\n",
+       "#sk-container-id-3 label.sk-toggleable__label {\n",
+       "  cursor: pointer;\n",
+       "  display: block;\n",
+       "  width: 100%;\n",
+       "  margin-bottom: 0;\n",
+       "  padding: 0.5em;\n",
+       "  box-sizing: border-box;\n",
+       "  text-align: center;\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 label.sk-toggleable__label-arrow:before {\n",
+       "  /* Arrow on the left of the label */\n",
+       "  content: \"▸\";\n",
+       "  float: left;\n",
+       "  margin-right: 0.25em;\n",
+       "  color: var(--sklearn-color-icon);\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 label.sk-toggleable__label-arrow:hover:before {\n",
+       "  color: var(--sklearn-color-text);\n",
+       "}\n",
+       "\n",
+       "/* Toggleable content - dropdown */\n",
+       "\n",
+       "#sk-container-id-3 div.sk-toggleable__content {\n",
+       "  max-height: 0;\n",
+       "  max-width: 0;\n",
+       "  overflow: hidden;\n",
+       "  text-align: left;\n",
+       "  /* unfitted */\n",
+       "  background-color: var(--sklearn-color-unfitted-level-0);\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 div.sk-toggleable__content.fitted {\n",
+       "  /* fitted */\n",
+       "  background-color: var(--sklearn-color-fitted-level-0);\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 div.sk-toggleable__content pre {\n",
+       "  margin: 0.2em;\n",
+       "  border-radius: 0.25em;\n",
+       "  color: var(--sklearn-color-text);\n",
+       "  /* unfitted */\n",
+       "  background-color: var(--sklearn-color-unfitted-level-0);\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 div.sk-toggleable__content.fitted pre {\n",
+       "  /* unfitted */\n",
+       "  background-color: var(--sklearn-color-fitted-level-0);\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 input.sk-toggleable__control:checked~div.sk-toggleable__content {\n",
+       "  /* Expand drop-down */\n",
+       "  max-height: 200px;\n",
+       "  max-width: 100%;\n",
+       "  overflow: auto;\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {\n",
+       "  content: \"▾\";\n",
+       "}\n",
+       "\n",
+       "/* Pipeline/ColumnTransformer-specific style */\n",
+       "\n",
+       "#sk-container-id-3 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {\n",
+       "  color: var(--sklearn-color-text);\n",
+       "  background-color: var(--sklearn-color-unfitted-level-2);\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 div.sk-label.fitted input.sk-toggleable__control:checked~label.sk-toggleable__label {\n",
+       "  background-color: var(--sklearn-color-fitted-level-2);\n",
+       "}\n",
+       "\n",
+       "/* Estimator-specific style */\n",
+       "\n",
+       "/* Colorize estimator box */\n",
+       "#sk-container-id-3 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {\n",
+       "  /* unfitted */\n",
+       "  background-color: var(--sklearn-color-unfitted-level-2);\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 div.sk-estimator.fitted input.sk-toggleable__control:checked~label.sk-toggleable__label {\n",
+       "  /* fitted */\n",
+       "  background-color: var(--sklearn-color-fitted-level-2);\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 div.sk-label label.sk-toggleable__label,\n",
+       "#sk-container-id-3 div.sk-label label {\n",
+       "  /* The background is the default theme color */\n",
+       "  color: var(--sklearn-color-text-on-default-background);\n",
+       "}\n",
+       "\n",
+       "/* On hover, darken the color of the background */\n",
+       "#sk-container-id-3 div.sk-label:hover label.sk-toggleable__label {\n",
+       "  color: var(--sklearn-color-text);\n",
+       "  background-color: var(--sklearn-color-unfitted-level-2);\n",
+       "}\n",
+       "\n",
+       "/* Label box, darken color on hover, fitted */\n",
+       "#sk-container-id-3 div.sk-label.fitted:hover label.sk-toggleable__label.fitted {\n",
+       "  color: var(--sklearn-color-text);\n",
+       "  background-color: var(--sklearn-color-fitted-level-2);\n",
+       "}\n",
+       "\n",
+       "/* Estimator label */\n",
+       "\n",
+       "#sk-container-id-3 div.sk-label label {\n",
+       "  font-family: monospace;\n",
+       "  font-weight: bold;\n",
+       "  display: inline-block;\n",
+       "  line-height: 1.2em;\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 div.sk-label-container {\n",
+       "  text-align: center;\n",
+       "}\n",
+       "\n",
+       "/* Estimator-specific */\n",
+       "#sk-container-id-3 div.sk-estimator {\n",
+       "  font-family: monospace;\n",
+       "  border: 1px dotted var(--sklearn-color-border-box);\n",
+       "  border-radius: 0.25em;\n",
+       "  box-sizing: border-box;\n",
+       "  margin-bottom: 0.5em;\n",
+       "  /* unfitted */\n",
+       "  background-color: var(--sklearn-color-unfitted-level-0);\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 div.sk-estimator.fitted {\n",
+       "  /* fitted */\n",
+       "  background-color: var(--sklearn-color-fitted-level-0);\n",
+       "}\n",
+       "\n",
+       "/* on hover */\n",
+       "#sk-container-id-3 div.sk-estimator:hover {\n",
+       "  /* unfitted */\n",
+       "  background-color: var(--sklearn-color-unfitted-level-2);\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 div.sk-estimator.fitted:hover {\n",
+       "  /* fitted */\n",
+       "  background-color: var(--sklearn-color-fitted-level-2);\n",
+       "}\n",
+       "\n",
+       "/* Specification for estimator info (e.g. \"i\" and \"?\") */\n",
+       "\n",
+       "/* Common style for \"i\" and \"?\" */\n",
+       "\n",
+       ".sk-estimator-doc-link,\n",
+       "a:link.sk-estimator-doc-link,\n",
+       "a:visited.sk-estimator-doc-link {\n",
+       "  float: right;\n",
+       "  font-size: smaller;\n",
+       "  line-height: 1em;\n",
+       "  font-family: monospace;\n",
+       "  background-color: var(--sklearn-color-background);\n",
+       "  border-radius: 1em;\n",
+       "  height: 1em;\n",
+       "  width: 1em;\n",
+       "  text-decoration: none !important;\n",
+       "  margin-left: 1ex;\n",
+       "  /* unfitted */\n",
+       "  border: var(--sklearn-color-unfitted-level-1) 1pt solid;\n",
+       "  color: var(--sklearn-color-unfitted-level-1);\n",
+       "}\n",
+       "\n",
+       ".sk-estimator-doc-link.fitted,\n",
+       "a:link.sk-estimator-doc-link.fitted,\n",
+       "a:visited.sk-estimator-doc-link.fitted {\n",
+       "  /* fitted */\n",
+       "  border: var(--sklearn-color-fitted-level-1) 1pt solid;\n",
+       "  color: var(--sklearn-color-fitted-level-1);\n",
+       "}\n",
+       "\n",
+       "/* On hover */\n",
+       "div.sk-estimator:hover .sk-estimator-doc-link:hover,\n",
+       ".sk-estimator-doc-link:hover,\n",
+       "div.sk-label-container:hover .sk-estimator-doc-link:hover,\n",
+       ".sk-estimator-doc-link:hover {\n",
+       "  /* unfitted */\n",
+       "  background-color: var(--sklearn-color-unfitted-level-3);\n",
+       "  color: var(--sklearn-color-background);\n",
+       "  text-decoration: none;\n",
+       "}\n",
+       "\n",
+       "div.sk-estimator.fitted:hover .sk-estimator-doc-link.fitted:hover,\n",
+       ".sk-estimator-doc-link.fitted:hover,\n",
+       "div.sk-label-container:hover .sk-estimator-doc-link.fitted:hover,\n",
+       ".sk-estimator-doc-link.fitted:hover {\n",
+       "  /* fitted */\n",
+       "  background-color: var(--sklearn-color-fitted-level-3);\n",
+       "  color: var(--sklearn-color-background);\n",
+       "  text-decoration: none;\n",
+       "}\n",
+       "\n",
+       "/* Span, style for the box shown on hovering the info icon */\n",
+       ".sk-estimator-doc-link span {\n",
+       "  display: none;\n",
+       "  z-index: 9999;\n",
+       "  position: relative;\n",
+       "  font-weight: normal;\n",
+       "  right: .2ex;\n",
+       "  padding: .5ex;\n",
+       "  margin: .5ex;\n",
+       "  width: min-content;\n",
+       "  min-width: 20ex;\n",
+       "  max-width: 50ex;\n",
+       "  color: var(--sklearn-color-text);\n",
+       "  box-shadow: 2pt 2pt 4pt #999;\n",
+       "  /* unfitted */\n",
+       "  background: var(--sklearn-color-unfitted-level-0);\n",
+       "  border: .5pt solid var(--sklearn-color-unfitted-level-3);\n",
+       "}\n",
+       "\n",
+       ".sk-estimator-doc-link.fitted span {\n",
+       "  /* fitted */\n",
+       "  background: var(--sklearn-color-fitted-level-0);\n",
+       "  border: var(--sklearn-color-fitted-level-3);\n",
+       "}\n",
+       "\n",
+       ".sk-estimator-doc-link:hover span {\n",
+       "  display: block;\n",
+       "}\n",
+       "\n",
+       "/* \"?\"-specific style due to the `<a>` HTML tag */\n",
+       "\n",
+       "#sk-container-id-3 a.estimator_doc_link {\n",
+       "  float: right;\n",
+       "  font-size: 1rem;\n",
+       "  line-height: 1em;\n",
+       "  font-family: monospace;\n",
+       "  background-color: var(--sklearn-color-background);\n",
+       "  border-radius: 1rem;\n",
+       "  height: 1rem;\n",
+       "  width: 1rem;\n",
+       "  text-decoration: none;\n",
+       "  /* unfitted */\n",
+       "  color: var(--sklearn-color-unfitted-level-1);\n",
+       "  border: var(--sklearn-color-unfitted-level-1) 1pt solid;\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 a.estimator_doc_link.fitted {\n",
+       "  /* fitted */\n",
+       "  border: var(--sklearn-color-fitted-level-1) 1pt solid;\n",
+       "  color: var(--sklearn-color-fitted-level-1);\n",
+       "}\n",
+       "\n",
+       "/* On hover */\n",
+       "#sk-container-id-3 a.estimator_doc_link:hover {\n",
+       "  /* unfitted */\n",
+       "  background-color: var(--sklearn-color-unfitted-level-3);\n",
+       "  color: var(--sklearn-color-background);\n",
+       "  text-decoration: none;\n",
+       "}\n",
+       "\n",
+       "#sk-container-id-3 a.estimator_doc_link.fitted:hover {\n",
+       "  /* fitted */\n",
+       "  background-color: var(--sklearn-color-fitted-level-3);\n",
+       "}\n",
+       "</style><div id=\"sk-container-id-3\" class=\"sk-top-container\"><div class=\"sk-text-repr-fallback\"><pre>LogisticRegression(max_iter=1000)</pre><b>In a Jupyter environment, please rerun this cell to show the HTML representation or trust the notebook. <br />On GitHub, the HTML representation is unable to render, please try loading this page with nbviewer.org.</b></div><div class=\"sk-container\" hidden><div class=\"sk-item\"><div class=\"sk-estimator fitted sk-toggleable\"><input class=\"sk-toggleable__control sk-hidden--visually\" id=\"sk-estimator-id-3\" type=\"checkbox\" checked><label for=\"sk-estimator-id-3\" class=\"sk-toggleable__label fitted sk-toggleable__label-arrow fitted\">&nbsp;&nbsp;LogisticRegression<a class=\"sk-estimator-doc-link fitted\" rel=\"noreferrer\" target=\"_blank\" href=\"https://scikit-learn.org/1.4/modules/generated/sklearn.linear_model.LogisticRegression.html\">?<span>Documentation for LogisticRegression</span></a><span class=\"sk-estimator-doc-link fitted\">i<span>Fitted</span></span></label><div class=\"sk-toggleable__content fitted\"><pre>LogisticRegression(max_iter=1000)</pre></div> </div></div></div></div>"
+      ],
+      "text/plain": [
+       "LogisticRegression(max_iter=1000)"
+      ]
+     },
+     "execution_count": 78,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "model = LogisticRegression(max_iter=1000)\n",
+    "\n",
+    "model.fit(X_train,y_train)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "3e74abc4-9146-4470-8961-5389b8a6ce8c",
+   "metadata": {},
+   "source": [
+    "### Model Evaluation"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 79,
+   "id": "54fe2fe4-9690-4f1e-acda-9993c52fa464",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Training Accuracy: 0.80604453125\n"
+     ]
+    }
+   ],
+   "source": [
+    "from sklearn.metrics import accuracy_score\n",
+    "\n",
+    "# Predict on the training data\n",
+    "y_train_pred = model.predict(X_train)\n",
+    "\n",
+    "# Calculate the accuracy on the training data\n",
+    "model_accuracy_train = accuracy_score(y_train, y_train_pred)\n",
+    "\n",
+    "# Print the accuracy score\n",
+    "print(\"Training Accuracy:\", model_accuracy_train)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 81,
+   "id": "037e4614-5344-4139-bbcb-13f5e2442831",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "X_train shape: (1280000, 622188)\n",
+      "y_train shape: 1280000\n",
+      "X_test shape: (320000, 622188)\n",
+      "y_test shape: 320000\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(\"X_train shape:\", X_train.shape)\n",
+    "print(\"y_train shape:\", len(y_train))\n",
+    "print(\"X_test shape:\", X_test.shape)\n",
+    "print(\"y_test shape:\", len(y_test))\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 82,
+   "id": "17f04df2-fe2c-45ab-9100-c6c9791da93f",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Test Accuracy: 0.780865625\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Fit the model on the training data\n",
+    "model.fit(X_train, y_train)\n",
+    "\n",
+    "# Predict on the test data\n",
+    "y_test_pred = model.predict(X_test)\n",
+    "\n",
+    "# Calculate accuracy\n",
+    "accuracy = accuracy_score(y_test, y_test_pred)\n",
+    "print(\"Test Accuracy:\", accuracy)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 83,
+   "id": "0066615d-0a24-4de1-b94e-1f6cc69a6ad6",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#save the trained model\n",
+    "import pickle\n",
+    "pickle.dump(model,open(\"twitter_model.pkl\",\"wb\"))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "ea298425-cc73-41ec-83e5-ec957738ee59",
+   "metadata": {},
+   "source": [
+    "### Making predictions using the saved model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 86,
+   "id": "5699f6e8-4b42-4779-93e3-ad72b4d17ea0",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Load the saved model\n",
+    "with open(\"twitter_model.pkl\", 'rb') as file:\n",
+    "    loaded_model = pickle.load(file)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 90,
+   "id": "510cd3ba-6554-4ddf-a578-64ccc697dc3b",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "0\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Extract the 200th sample from X_test\n",
+    "X_new = X_test[200]  # Use indexing to get the 200th sample\n",
+    "\n",
+    "# Check the true label for the 200th sample\n",
+    "print(y_test[200])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 91,
+   "id": "a2d3457e-ae94-4e84-a37d-fbe7078c91ec",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Prediction: [0]\n",
+      "Negative Tweet\n"
+     ]
+    }
+   ],
+   "source": [
+    "prediction = loaded_model.predict(X_new)\n",
+    "\n",
+    "# Print the prediction\n",
+    "print(\"Prediction:\", prediction)\n",
+    "\n",
+    "# Check if the prediction is positive or negative\n",
+    "if prediction[0] == 0:\n",
+    "    print(\"Negative Tweet\")\n",
+    "else:\n",
+    "    print(\"Positive Tweet\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 92,
+   "id": "e4c001c5-3fc6-43bf-959c-928a78c14b7d",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "1\n",
+      "Prediction: [1]\n",
+      "Positive Tweet\n"
+     ]
+    }
+   ],
+   "source": [
+    "X_new = X_test[68] \n",
+    "print(y_test[68])\n",
+    "\n",
+    "prediction = loaded_model.predict(X_new)\n",
+    "\n",
+    "# Print the prediction\n",
+    "print(\"Prediction:\", prediction)\n",
+    "\n",
+    "# Check if the prediction is positive or negative\n",
+    "if prediction[0] == 0:\n",
+    "    print(\"Negative Tweet\")\n",
+    "else:\n",
+    "    print(\"Positive Tweet\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "2d0c76ee-16c8-4c97-8f70-9623b7baa586",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.11.4"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
